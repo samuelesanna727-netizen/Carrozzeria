@@ -1,129 +1,285 @@
 "use client";
 
-import { Settings, Save, Shield, Bell, HardDrive, User, Building2, Lock, ArrowLeft } from "lucide-react";
+import { useState, useEffect } from "react";
+import { 
+  Save, Building2, Lock, ArrowLeft, 
+  LogOut, Clock, CheckCircle2,
+  ChevronRight, Key, Percent, AlertOctagon 
+} from "lucide-react";
 import Link from "next/link";
 
+// Definizione del tipo per lo stato
+type SettingsState = {
+  nomeAttivita: string;
+  pIva: string;
+  emailNotifiche: string;
+  vecchiaPassword: string;
+  nuovaPassword: string;
+  confermaPassword: string;
+  pinAccesso: string;
+  aliquotaIva: string;
+  autoBackup: boolean;
+  notificheScadenza: boolean;
+};
+
 export default function ImpostazioniPage() {
-  return (
-    <div className="p-8 w-full max-w-[1400px] mx-auto animate-in fade-in duration-500">
+  const [isSaving, setIsSaving] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [error, setError] = useState("");
+
+  const [settings, setSettings] = useState<SettingsState>({
+    nomeAttivita: "Samuele Pro Auto",
+    pIva: "IT01234567890",
+    emailNotifiche: "officina@samuele.it",
+    vecchiaPassword: "",
+    nuovaPassword: "",
+    confermaPassword: "",
+    pinAccesso: "1234",
+    aliquotaIva: "22",
+    autoBackup: true,
+    notificheScadenza: true
+  });
+
+  // Carica le impostazioni salvate all'avvio
+  useEffect(() => {
+    const saved = localStorage.getItem("proauto_config");
+    if (saved) {
+      setSettings(prev => ({ ...prev, ...JSON.parse(saved) }));
+    }
+  }, []);
+
+  const handleSave = () => {
+    setError("");
+    
+    // 1. RECUPERO E DECODIFICA PASSWORD ATTUALE
+    const storedAdmin = localStorage.getItem("adminCredentials");
+    let currentPassword = "admin"; // Fallback standard
+
+    if (storedAdmin) {
+      try {
+        const parsed = JSON.parse(storedAdmin);
+        // Se è un oggetto prende .password, altrimenti assume sia una stringa pura
+        currentPassword = typeof parsed === 'object' ? parsed.password : parsed;
+      } catch (e) {
+        currentPassword = storedAdmin; // Se non è JSON, è una stringa semplice
+      }
+    }
+
+    // 2. VALIDAZIONE CAMBIO PASSWORD
+    // Eseguiamo i controlli solo se l'utente ha iniziato a scrivere nel campo password
+    if (settings.vecchiaPassword || settings.nuovaPassword || settings.confermaPassword) {
+      if (settings.vecchiaPassword !== currentPassword) {
+        setError("La password attuale inserita non è corretta.");
+        return;
+      }
+      if (settings.nuovaPassword !== settings.confermaPassword) {
+        setError("La nuova password e la conferma non coincidono.");
+        return;
+      }
+      if (settings.nuovaPassword.length < 4) {
+        setError("La nuova password deve essere di almeno 4 caratteri.");
+        return;
+      }
+
+      // Se i controlli passano, aggiorna le credenziali di accesso
+      localStorage.setItem("adminCredentials", JSON.stringify({ password: settings.nuovaPassword }));
+    }
+
+    // 3. SALVATAGGIO CONFIGURAZIONI GENERALI
+    setIsSaving(true);
+    
+    setTimeout(() => {
+      // Escludiamo i campi password temporanei dal salvataggio della config generale
+      const { vecchiaPassword, nuovaPassword, confermaPassword, ...configToSave } = settings;
+      localStorage.setItem("proauto_config", JSON.stringify(configToSave));
       
-      {/* HEADER COERENTE */}
-      <div className="flex justify-between items-end mb-10 pb-6 border-b border-slate-100">
+      setIsSaving(false);
+      setShowSuccess(true);
+      
+      // Pulizia campi password nel form
+      setSettings(prev => ({ 
+        ...prev, 
+        vecchiaPassword: "", 
+        nuovaPassword: "", 
+        confermaPassword: "" 
+      }));
+
+      setTimeout(() => setShowSuccess(false), 3000);
+    }, 800);
+  };
+
+  const toggleSetting = (key: keyof SettingsState) => {
+    setSettings(prev => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  return (
+    <div className="p-8 w-full max-w-[1400px] mx-auto animate-in fade-in duration-500 bg-white text-slate-600 min-h-screen">
+      
+      {/* HEADER */}
+      <div className="flex justify-between items-end mb-12 border-b border-slate-50 pb-8">
         <div>
-          <Link href="/" className="flex items-center gap-2 text-slate-400 hover:text-blue-600 transition-colors mb-4 text-xs font-bold uppercase tracking-widest">
-            <ArrowLeft size={14} /> Dashboard
+          <Link href="/" className="flex items-center gap-2 text-slate-300 hover:text-blue-500 transition-all mb-4 text-[9px] font-black uppercase tracking-[0.3em]">
+            <ArrowLeft size={12} /> Dashboard
           </Link>
-          <h2 className="text-2xl font-bold text-slate-800 uppercase tracking-tight">
-            Configurazione <span className="text-blue-600">Sistema</span>
+          <h2 className="text-3xl font-black text-slate-800 uppercase tracking-tighter text-left">
+            System <span className="text-blue-500 italic">Settings</span>
           </h2>
-          <p className="text-slate-400 text-sm italic">Gestisci le preferenze della tua officina</p>
         </div>
+
+        {showSuccess && (
+          <div className="flex items-center gap-2 bg-green-50 text-green-600 px-6 py-3 rounded-xl border border-green-100 animate-in zoom-in">
+            <CheckCircle2 size={16} />
+            <span className="text-[10px] font-black uppercase tracking-widest">Configurazione salvata</span>
+          </div>
+        )}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-10 text-left">
         
-        {/* COLONNA SINISTRA: IMPOSTAZIONI GENERALI */}
+        {/* COLONNA INPUT PRINCIPALI */}
         <div className="lg:col-span-2 space-y-8">
           
-          {/* SEZIONE ACCOUNT */}
-          <div className="bg-white p-8 rounded-2xl border border-slate-200 shadow-sm">
-            <div className="flex items-center gap-3 mb-8">
-              <div className="p-2 bg-blue-50 rounded-lg">
-                <Building2 className="text-blue-600" size={20} />
-              </div>
-              <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400">Dati Officina</h3>
+          {/* SEZIONE ANAGRAFICA */}
+          <section className="bg-white p-8 rounded-xl border border-slate-100 shadow-sm">
+            <div className="flex items-center gap-3 mb-8 border-b border-slate-50 pb-4">
+              <Building2 className="text-blue-500" size={18} />
+              <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-800">Dati Officina</h3>
             </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <div className="group">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1 mb-2 block">Nome Attività</label>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Nome Attività</label>
                 <input 
                   type="text" 
-                  defaultValue="Samuele Pro Auto" 
-                  className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:bg-white focus:border-blue-400 transition-all font-bold text-slate-700" 
+                  value={settings.nomeAttivita} 
+                  onChange={e => setSettings({...settings, nomeAttivita: e.target.value})} 
+                  className="w-full px-5 py-3 bg-slate-50 border border-slate-100 rounded-lg outline-none focus:bg-white focus:border-blue-400 font-bold transition-all" 
                 />
               </div>
-              <div className="group">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1 mb-2 block">Email Notifiche</label>
+              <div className="space-y-2">
+                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Partita IVA</label>
                 <input 
-                  type="email" 
-                  defaultValue="officina@samuele.it" 
-                  className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:bg-white focus:border-blue-400 transition-all font-bold text-slate-700" 
+                  type="text" 
+                  value={settings.pIva} 
+                  onChange={e => setSettings({...settings, pIva: e.target.value})} 
+                  className="w-full px-5 py-3 bg-slate-50 border border-slate-100 rounded-lg outline-none focus:bg-white focus:border-blue-400 font-bold transition-all" 
                 />
               </div>
             </div>
-          </div>
+          </section>
 
-          {/* SEZIONE SICUREZZA */}
-          <div className="bg-white p-8 rounded-2xl border border-slate-200 shadow-sm">
-            <div className="flex items-center gap-3 mb-8">
-              <div className="p-2 bg-blue-50 rounded-lg">
-                <Shield className="text-blue-600" size={20} />
-              </div>
-              <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400">Sicurezza Accesso</h3>
+          {/* SEZIONE SICUREZZA - CAMBIO PASSWORD */}
+          <section className="bg-white p-8 rounded-xl border border-slate-100 shadow-sm">
+            <div className="flex items-center gap-3 mb-6">
+              <Key className="text-blue-500" size={18} />
+              <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-800">Gestione Password</h3>
             </div>
 
-            <div className="max-w-md space-y-6">
-              <div className="group">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1 mb-2 block">Pin Accesso Rapido</label>
-                <div className="relative">
-                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={16} />
-                  <input 
-                    type="password" 
-                    defaultValue="1234" 
-                    className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:bg-white focus:border-blue-400 transition-all font-bold text-slate-700" 
-                  />
-                </div>
-                <p className="text-[9px] text-slate-400 mt-2 ml-1">Utilizzato per il log-in rapido dai tablet in officina</p>
+            {error && (
+              <div className="mb-6 p-4 bg-red-50 border border-red-100 rounded-lg text-red-500 text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 animate-in slide-in-from-left-2">
+                <AlertOctagon size={14} /> {error}
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="space-y-2">
+                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Vecchia Password</label>
+                <input 
+                  type="password" 
+                  value={settings.vecchiaPassword} 
+                  onChange={e => setSettings({...settings, vecchiaPassword: e.target.value})} 
+                  className="w-full px-5 py-3 bg-slate-50 border border-slate-100 rounded-lg outline-none focus:bg-white focus:border-blue-400 font-bold transition-all" 
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Nuova Password</label>
+                <input 
+                  type="password" 
+                  value={settings.nuovaPassword} 
+                  onChange={e => setSettings({...settings, nuovaPassword: e.target.value})} 
+                  className="w-full px-5 py-3 bg-slate-50 border border-slate-100 rounded-lg outline-none focus:bg-white focus:border-blue-400 font-bold transition-all" 
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Conferma Nuova</label>
+                <input 
+                  type="password" 
+                  value={settings.confermaPassword} 
+                  onChange={e => setSettings({...settings, confermaPassword: e.target.value})} 
+                  className="w-full px-5 py-3 bg-slate-50 border border-slate-100 rounded-lg outline-none focus:bg-white focus:border-blue-400 font-bold transition-all" 
+                />
               </div>
             </div>
-          </div>
+          </section>
         </div>
 
-        {/* COLONNA DESTRA: AUTOMAZIONI E SALVATAGGIO */}
-        <div className="space-y-8">
-          
-          {/* NOTIFICHE */}
-          <div className="bg-white p-8 rounded-2xl border border-slate-200 shadow-sm">
-            <div className="flex items-center gap-3 mb-8">
-              <div className="p-2 bg-blue-50 rounded-lg">
-                <Bell className="text-blue-600" size={20} />
-              </div>
-              <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400">Automazioni</h3>
+        {/* COLONNA LATERALE - AZIONI RAPIDE */}
+        <div className="space-y-6">
+          <button 
+            onClick={handleSave}
+            disabled={isSaving}
+            className={`w-full py-5 rounded-xl font-black uppercase tracking-[0.2em] text-[11px] flex items-center justify-center gap-3 transition-all shadow-xl shadow-blue-100 border ${
+              isSaving ? "bg-slate-50 text-slate-300 border-slate-100" : "bg-blue-500 text-white border-blue-500 hover:bg-blue-600 active:scale-[0.97]"
+            }`}
+          >
+            {isSaving ? <Clock className="animate-spin" size={16} /> : <Save size={16} />}
+            {isSaving ? "Sincronizzazione..." : "Salva Tutto"}
+          </button>
+
+          <div className="bg-slate-50/50 p-6 rounded-xl border border-slate-100 space-y-4">
+            <div className="flex items-center justify-between p-3 bg-white rounded-lg border border-slate-100">
+              <span className="text-[10px] font-black text-slate-700 uppercase tracking-tight">Pin Rapido Tablet</span>
+              <input 
+                type="text" 
+                maxLength={4}
+                value={settings.pinAccesso} 
+                onChange={e => setSettings({...settings, pinAccesso: e.target.value})} 
+                className="w-12 text-right font-black text-blue-600 outline-none bg-transparent" 
+              />
+            </div>
+            
+            <div className="flex items-center justify-between p-3 bg-white rounded-lg border border-slate-100">
+              <span className="text-[10px] font-black text-slate-700 uppercase">Backup Cloud</span>
+              <button 
+                onClick={() => toggleSetting("autoBackup")}
+                className={`w-9 h-5 rounded-full relative transition-all ${settings.autoBackup ? "bg-blue-500" : "bg-slate-200"}`}
+              >
+                <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${settings.autoBackup ? "right-1" : "left-1"}`} />
+              </button>
             </div>
 
-            <div className="space-y-6">
-              <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-100">
-                <div>
-                  <p className="text-xs font-bold text-slate-700 uppercase tracking-tight">WhatsApp Clienti</p>
-                  <p className="text-[10px] text-slate-400 italic">Messaggio a fine lavoro</p>
-                </div>
-                <button className="w-10 h-5 bg-blue-600 rounded-full relative transition-all shadow-inner shadow-blue-800/20">
-                  <div className="absolute right-1 top-1 w-3 h-3 bg-white rounded-full shadow-sm"></div>
-                </button>
-              </div>
-
-              <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-100">
-                <div>
-                  <p className="text-xs font-bold text-slate-700 uppercase tracking-tight">Backup Cloud</p>
-                  <p className="text-[10px] text-slate-400 italic">Salvataggio ogni 24h</p>
-                </div>
-                <button className="w-10 h-5 bg-slate-200 rounded-full relative transition-all">
-                  <div className="absolute left-1 top-1 w-3 h-3 bg-white rounded-full"></div>
-                </button>
+            <div className="flex items-center justify-between p-3 bg-white rounded-lg border border-slate-100">
+              <span className="text-[10px] font-black text-slate-700 uppercase tracking-tight">Iva Default</span>
+              <div className="flex items-center gap-1">
+                <input 
+                  type="text" 
+                  value={settings.aliquotaIva} 
+                  onChange={e => setSettings({...settings, aliquotaIva: e.target.value})} 
+                  className="w-6 text-right font-black text-blue-600 outline-none bg-transparent" 
+                />
+                <Percent size={12} className="text-slate-300" />
               </div>
             </div>
           </div>
 
-          {/* AZIONE DI SALVATAGGIO */}
-          <div className="bg-blue-600 p-8 rounded-2xl shadow-lg shadow-blue-100 text-center space-y-4">
-            <p className="text-white/80 text-[10px] font-bold uppercase tracking-[0.2em]">Conferma Modifiche</p>
-            <button className="w-full bg-white text-blue-600 py-4 rounded-xl font-black uppercase tracking-widest text-xs flex items-center justify-center gap-3 shadow-md hover:bg-slate-50 transition-all active:scale-95">
-              <Save size={18} />
-              Salva Tutto
+          <div className="space-y-3 pt-4 border-t border-slate-100">
+            <button 
+              onClick={() => window.location.href = "/login"} 
+              className="w-full flex items-center justify-between p-4 bg-white border border-slate-100 rounded-xl hover:bg-blue-50 transition-all group"
+            >
+              <div className="flex items-center gap-3">
+                <LogOut size={16} className="text-slate-400 group-hover:text-blue-500" />
+                <span className="text-[10px] font-black text-slate-700 uppercase tracking-widest text-left">Chiudi Sessione</span>
+              </div>
+              <ChevronRight size={14} className="text-slate-200" />
+            </button>
+            
+            <button 
+              onClick={() => confirm("⚠️ Reset totale? Perderai tutti i dati!") && localStorage.clear()} 
+              className="w-full p-4 text-[9px] font-black text-red-300 uppercase tracking-widest hover:text-red-500 transition-colors"
+            >
+              Reset Fabbrica
             </button>
           </div>
-
         </div>
       </div>
     </div>
