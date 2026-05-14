@@ -15,15 +15,18 @@ export type Task = {
 
 type TaskContextType = {
   tasks: Task[];
+  searchQuery: string; // <-- AGGIUNTO
+  setSearchQuery: (query: string) => void; // <-- AGGIUNTO
   addTask: (task: Omit<Task, "id" | "dataIngresso">) => void;
   updateTask: (id: string, newStatus: Task["status"]) => void;
-  deleteTask: (id: string) => void; // Aggiunta funzione delete
+  deleteTask: (id: string) => void;
 };
 
 const TaskContext = createContext<TaskContextType | undefined>(undefined);
 
 export function TaskProvider({ children }: { children: React.ReactNode }) {
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [searchQuery, setSearchQuery] = useState(""); // <-- AGGIUNTO: Stato per la ricerca
 
   // Caricamento iniziale
   useEffect(() => {
@@ -56,7 +59,15 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <TaskContext.Provider value={{ tasks, addTask, updateTask, deleteTask }}>
+    // Aggiunti searchQuery e setSearchQuery nel value del Provider
+    <TaskContext.Provider value={{ 
+      tasks, 
+      searchQuery, 
+      setSearchQuery, 
+      addTask, 
+      updateTask, 
+      deleteTask 
+    }}>
       {children}
     </TaskContext.Provider>
   );

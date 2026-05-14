@@ -41,10 +41,10 @@ export default function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
         {isOpen && (
           <div className="flex items-center gap-2 italic">
             <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center font-black text-white text-sm">
-              C
+              M
             </div>
             <span className="font-black text-slate-900 tracking-tighter uppercase text-lg">
-              PRO <span className="text-blue-600 font-black italic">Auto</span>
+              Fll. <span className="text-blue-600 font-black italic">Lintas</span>
             </span>
           </div>
         )}

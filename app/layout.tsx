@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import Sidebar from "./components/layout/Sidebar";
+import Sidebar from "./components/layout/Sidebar"; 
 import Navbar from "./components/layout/Navbar";
-import { TaskProvider } from "./context/TaskContext";
+import { TaskProvider } from "./context/TaskContext"; 
 import "./globals.css";
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
