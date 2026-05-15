@@ -11,16 +11,18 @@ export default function TaskInput() {
     targa: '', 
     modello: '', 
     status: 'In Corso' as TaskStatus, 
-    priorita: 'Media' as Priority 
+    priorita: 'Media' as Priority,
+    categoria: 'Auto' as any // Aggiunta categoria per compatibilità DB
   });
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Il cast "as any" sulla proprietà status risolve l'errore di incompatibilità nel build
+    // Ora includiamo la categoria richiesta dal nuovo schema Prisma
     addTask({ 
       ...form, 
       descrizione: '',
+      categoria: form.categoria, // Campo ora obbligatorio
       status: form.status as any 
     });
 
@@ -29,7 +31,8 @@ export default function TaskInput() {
       targa: '', 
       modello: '', 
       status: 'In Corso', 
-      priorita: 'Media' 
+      priorita: 'Media',
+      categoria: 'Auto'
     });
     
     alert("Veicolo registrato con successo!");

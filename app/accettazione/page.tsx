@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { useTasks } from "../context/TaskContext";
+// Importiamo l'azione che scriverà nel DB
+import { createVehicle } from "../actions";
 import { Car, Bike, User, AlertCircle, CheckCircle2, ArrowLeft, Gauge, Plus } from "lucide-react";
 import Link from "next/link";
 import databaseVeicoli from "../data/modelli.json";
@@ -11,12 +12,11 @@ type Difficulty = "Semplice" | "Media" | "Complessa";
 type Categoria = "Auto" | "Moto";
 
 export default function AccettazionePage() {
-  const { addTask } = useTasks();
   const [showToast, setShowToast] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false); // Per gestire il caricamento
   const [showMarcheSuggestions, setShowMarcheSuggestions] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
 
-  // Stato per gestire la categoria separata
   const [categoria, setCategoria] = useState<Categoria>("Auto");
 
   const [formData, setFormData] = useState({
@@ -29,11 +29,9 @@ export default function AccettazionePage() {
     difficolta: "Media" as Difficulty,
   });
 
-  // Determina quale database usare (chiavi 'auto' o 'moto' del JSON)
   const dbCorrente = categoria === "Auto" ? databaseVeicoli.auto : databaseVeicoli.moto;
   const elencoMarche = Object.keys(dbCorrente).sort();
 
-  // Gestione chiusura dropdown al click esterno
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
@@ -44,32 +42,38 @@ export default function AccettazionePage() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  useEffect(() => {
-    if (showToast) {
-      const timer = setTimeout(() => setShowToast(false), 3000);
-      return () => clearTimeout(timer);
-    }
-  }, [showToast]);
-
-  const handleSubmit = (e: React.FormEvent) => {
+  // GESTIONE INVIO AL DATABASE
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    addTask({
-      cliente: formData.cliente,
-      targa: formData.targa,
-      modello: `${formData.marca} ${formData.modello}`,
-      descrizione: `[${formData.difficolta.toUpperCase()}] ${formData.descrizione}`,
-      priorita: formData.priorita,
-      categoria: categoria, // Passiamo la categoria scelta
-      status: "In Corso" as any,
-    });
-    setShowToast(true);
-    setFormData({
-      cliente: "", targa: "", marca: "", modello: "", descrizione: "",
-      priorita: "Media", difficolta: "Media"
-    });
+    if (isSubmitting) return;
+
+    setIsSubmitting(true);
+    
+    try {
+      // Chiamiamo l'azione server che parla con Prisma
+      await createVehicle({
+        cliente: formData.cliente,
+        targa: formData.targa,
+        modello: `${formData.marca} ${formData.modello}`,
+        descrizione: `[${formData.difficolta.toUpperCase()}] ${formData.descrizione}`,
+        priorita: formData.priorita,
+        categoria: categoria,
+      });
+
+      setShowToast(true);
+      // Il redirect avviene già dentro l'azione, ma puliamo per sicurezza
+      setFormData({
+        cliente: "", targa: "", marca: "", modello: "", descrizione: "",
+        priorita: "Media", difficolta: "Media"
+      });
+    } catch (error) {
+      console.error("Errore nel salvataggio:", error);
+      alert("Errore nel salvataggio del veicolo.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  // Filtro marche basato sulla scrittura
   const filteredMarche = formData.marca.length > 0
     ? elencoMarche.filter(m => m.toLowerCase().includes(formData.marca.toLowerCase()))
     : [];
@@ -88,8 +92,8 @@ export default function AccettazionePage() {
       {/* HEADER */}
       <div className="flex justify-between items-end mb-10 pb-6 border-b border-slate-100">
         <div>
-          <Link href="/lavorazione" className="flex items-center gap-2 text-slate-400 hover:text-blue-600 transition-colors mb-4 text-[10px] font-black uppercase tracking-[0.2em]">
-            <ArrowLeft size={14} /> Torna ai Lavori
+          <Link href="/" className="flex items-center gap-2 text-slate-400 hover:text-blue-600 transition-colors mb-4 text-[10px] font-black uppercase tracking-[0.2em]">
+            <ArrowLeft size={14} /> Torna al Tabellone
           </Link>
           <h2 className="text-2xl font-black text-slate-800 uppercase tracking-tight">
             Nuova <span className="text-blue-600 italic">Accettazione</span>
@@ -97,7 +101,7 @@ export default function AccettazionePage() {
         </div>
       </div>
 
-      {/* CATEGORY SWITCHER - Il Toggle che cercavi */}
+      {/* CATEGORY SWITCHER */}
       <div className="flex bg-slate-100 p-1 rounded-2xl w-fit mb-8 gap-1">
         <button
           onClick={() => { setCategoria("Auto"); setFormData({ ...formData, marca: "", modello: "" }); }}
@@ -114,7 +118,6 @@ export default function AccettazionePage() {
       </div>
 
       <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-
         <div className="lg:col-span-2 space-y-6">
           <div className="bg-white p-6 lg:p-8 rounded-2xl border border-slate-100 shadow-sm space-y-8">
             <div className="flex items-center gap-3 border-b border-slate-50 pb-4">
@@ -215,7 +218,6 @@ export default function AccettazionePage() {
         <div className="space-y-6">
           <div className="bg-white p-8 rounded-2xl border border-slate-200 shadow-sm flex flex-col h-full justify-between">
             <div className="space-y-10">
-              {/* PRIORITÀ */}
               <div>
                 <div className="flex items-center gap-2 mb-6 text-slate-400">
                   <AlertCircle size={16} />
@@ -237,7 +239,6 @@ export default function AccettazionePage() {
                 </div>
               </div>
 
-              {/* DIFFICOLTÀ */}
               <div>
                 <div className="flex items-center gap-2 mb-6 text-slate-400">
                   <Gauge size={16} />
@@ -267,10 +268,11 @@ export default function AccettazionePage() {
 
             <button
               type="submit"
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white py-5 rounded-xl font-black uppercase tracking-[0.2em] text-xs flex items-center justify-center gap-3 shadow-lg shadow-blue-100 transition-all active:scale-[0.98] mt-12"
+              disabled={isSubmitting}
+              className={`w-full bg-blue-600 hover:bg-blue-700 text-white py-5 rounded-xl font-black uppercase tracking-[0.2em] text-xs flex items-center justify-center gap-3 shadow-lg shadow-blue-100 transition-all active:scale-[0.98] mt-12 ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
               <Plus size={18} strokeWidth={3} />
-              Conferma Ingresso
+              {isSubmitting ? "Registrazione..." : "Conferma Ingresso"}
             </button>
           </div>
         </div>
