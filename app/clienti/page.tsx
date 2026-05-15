@@ -28,17 +28,6 @@ export default function ClientiPage() {
         </button>
       </div>
 
-      {/* SEARCH BAR */}
-      <div className="mb-8">
-        <div className="flex items-center gap-3 bg-white border border-slate-200 px-4 py-3 rounded-xl max-w-md shadow-sm focus-within:border-blue-400 transition-all">
-          <Search size={18} className="text-slate-400" />
-          <input 
-            type="text" 
-            placeholder="Cerca per nome, telefono o targa..." 
-            className="outline-none text-sm w-full bg-transparent" 
-          />
-        </div>
-      </div>
 
       {/* GRID CLIENTI (3 COLONNE) */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

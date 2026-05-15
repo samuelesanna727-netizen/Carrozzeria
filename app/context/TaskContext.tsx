@@ -10,15 +10,17 @@ export type Task = {
   descrizione: string;
   priorita: "Bassa" | "Media" | "Alta";
   status: "In Corso" | "Verniciatura" | "Consegnato";
+  categoria: "Auto" | "Moto"; // <-- Aggiunto
   dataIngresso: string;
 };
 
 type TaskContextType = {
   tasks: Task[];
-  searchQuery: string; // <-- AGGIUNTO
-  setSearchQuery: (query: string) => void; // <-- AGGIUNTO
+  searchQuery: string;
+  setSearchQuery: (query: string) => void;
   addTask: (task: Omit<Task, "id" | "dataIngresso">) => void;
   updateTask: (id: string, newStatus: Task["status"]) => void;
+  updateTaskDetails: (id: string, updates: Partial<Task>) => void;
   deleteTask: (id: string) => void;
 };
 
@@ -26,15 +28,15 @@ const TaskContext = createContext<TaskContextType | undefined>(undefined);
 
 export function TaskProvider({ children }: { children: React.ReactNode }) {
   const [tasks, setTasks] = useState<Task[]>([]);
-  const [searchQuery, setSearchQuery] = useState(""); // <-- AGGIUNTO: Stato per la ricerca
+  const [searchQuery, setSearchQuery] = useState("");
 
-  // Caricamento iniziale
   useEffect(() => {
     const saved = localStorage.getItem("carrozzeria_tasks");
-    if (saved) setTasks(JSON.parse(saved));
+    if (saved) {
+      try { setTasks(JSON.parse(saved)); } catch (e) { console.error(e); }
+    }
   }, []);
 
-  // Salvataggio automatico
   useEffect(() => {
     localStorage.setItem("carrozzeria_tasks", JSON.stringify(tasks));
   }, [tasks]);
@@ -49,9 +51,11 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
   };
 
   const updateTask = (id: string, newStatus: Task["status"]) => {
-    setTasks((prev) =>
-      prev.map((t) => (t.id === id ? { ...t, status: newStatus } : t))
-    );
+    setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, status: newStatus } : t)));
+  };
+
+  const updateTaskDetails = (id: string, updates: Partial<Task>) => {
+    setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, ...updates } : t)));
   };
 
   const deleteTask = (id: string) => {
@@ -59,15 +63,7 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    // Aggiunti searchQuery e setSearchQuery nel value del Provider
-    <TaskContext.Provider value={{ 
-      tasks, 
-      searchQuery, 
-      setSearchQuery, 
-      addTask, 
-      updateTask, 
-      deleteTask 
-    }}>
+    <TaskContext.Provider value={{ tasks, searchQuery, setSearchQuery, addTask, updateTask, updateTaskDetails, deleteTask }}>
       {children}
     </TaskContext.Provider>
   );

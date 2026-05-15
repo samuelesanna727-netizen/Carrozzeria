@@ -1,143 +1,127 @@
 "use client";
 
 import { useTasks } from "../context/TaskContext";
-import { CheckCircle2, User, Trash2, Check, X, SearchX } from "lucide-react";
+import { 
+  CheckCircle2, User, Trash2, Check, X, SearchX, 
+  FileText, AlertCircle, Clock, Edit3, Save, 
+  Car, Bike, Hash, ArrowRight 
+} from "lucide-react";
 import { useState } from "react";
 
 export default function LavorazionePage() {
-  // 1. Estraiamo searchQuery dal contesto per far funzionare la ricerca della Navbar
-  const { tasks, updateTask, deleteTask, searchQuery } = useTasks();
-  
+  const { tasks, updateTask, updateTaskDetails, deleteTask, searchQuery } = useTasks();
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [deliveringId, setDeliveringId] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [tempDesc, setTempDesc] = useState("");
 
-  // 2. Filtriamo i task in base allo stato (non consegnati) E alla ricerca della Navbar
   const lavoriFiltrati = tasks.filter((task) => {
     const searchLower = searchQuery.toLowerCase();
     const matchSearch =
       task.modello.toLowerCase().includes(searchLower) ||
       task.targa.toLowerCase().includes(searchLower) ||
-      task.cliente.toLowerCase().includes(searchLower);
-
+      task.cliente.toLowerCase().includes(searchLower) ||
+      task.categoria.toLowerCase().includes(searchLower); // <-- Ricerca per Moto/Auto
     return task.status !== "Consegnato" && matchSearch;
   });
 
+  const saveEdit = (id: string) => {
+    updateTaskDetails(id, { descrizione: tempDesc });
+    setEditingId(null);
+  };
+
   return (
-    <div className="p-8 w-full max-w-[1600px] mx-auto animate-in fade-in duration-500">
-      
-      {/* HEADER SEMPLICE E DISCRETO */}
-      <div className="flex justify-between items-end mb-10 pb-6 border-b border-slate-100">
+    <div className="min-h-screen bg-[#F1F5F9] p-6 md:p-12 w-full max-w-[1800px] mx-auto font-sans">
+      <div className="flex flex-col md:flex-row md:items-center justify-between mb-12 gap-6 border-l-4 border-blue-600 pl-6">
         <div>
-          <h2 className="text-2xl font-bold text-slate-800 uppercase tracking-tight">
-            Auto in lavorazione
-          </h2>
-          <p className="text-slate-400 text-sm italic">
-            {searchQuery 
-              ? `Risultati per: "${searchQuery}"` 
-              : "Gestione flotta attiva"}
-          </p>
+          <h2 className="text-3xl font-black text-slate-900 tracking-tight uppercase italic">Controllo <span className="text-blue-600">Operativo</span></h2>
+          <p className="text-slate-500 font-medium text-sm mt-1 uppercase tracking-widest opacity-70">Monitoraggio flotta in tempo reale</p>
         </div>
-        <div className="text-right text-slate-500 font-bold text-sm uppercase tracking-widest">
-          {lavoriFiltrati.length} {lavoriFiltrati.length === 1 ? 'Mezzo' : 'Mezzi'} in lista
+        <div className="bg-white px-6 py-3 rounded-lg shadow-sm border border-slate-200 flex items-center gap-3">
+          <Clock className="text-blue-500" size={18} />
+          <span className="text-xl font-black text-slate-800">{lavoriFiltrati.length}</span>
+          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">In Coda</span>
         </div>
       </div>
       
-      {/* GRID A 3 COLONNE */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
         {lavoriFiltrati.map(task => (
-          <div 
-            key={task.id} 
-            className={`bg-white rounded-xl border-2 transition-all duration-300 flex flex-col shadow-sm overflow-hidden ${
-              deliveringId === task.id ? 'border-green-500 shadow-green-50' : 'border-slate-200'
-            }`}
-          >
-            
-            {/* PARTE ALTA: MODELLO E TARGA */}
-            <div className="p-6 pb-4">
+          <div key={task.id} className={`group bg-white rounded-2xl border border-slate-200 shadow-sm transition-all duration-300 hover:shadow-xl hover:border-blue-200 overflow-hidden flex flex-col ${task.priorita === 'Alta' ? 'ring-1 ring-red-100' : ''}`}>
+            <div className="p-6 bg-slate-50/50 border-b border-slate-100 relative">
               <div className="flex justify-between items-start">
-                <div>
-                  <h3 className="text-lg font-bold text-slate-900 uppercase leading-tight">{task.modello}</h3>
-                  <span className="text-xs font-mono font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded mt-1 inline-block border border-blue-100">
-                    {task.targa}
-                  </span>
-                </div>
-                
-                <div className="h-8">
-                  {deletingId === task.id ? (
-                    <div className="flex gap-1 animate-in zoom-in">
-                      <button onClick={() => { deleteTask(task.id); setDeletingId(null); }} className="text-red-500 hover:bg-red-50 p-1.5 rounded-lg transition-colors"><Check size={18} /></button>
-                      <button onClick={() => setDeletingId(null)} className="text-slate-300 hover:bg-slate-50 p-1.5 rounded-lg transition-colors"><X size={18} /></button>
-                    </div>
-                  ) : (
-                    <button onClick={() => setDeletingId(task.id)} className="text-slate-200 hover:text-red-400 p-1.5 transition-all opacity-40 hover:opacity-100">
-                      <Trash2 size={18} />
-                    </button>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* PARTE CENTRALE: CLIENTE E STATO */}
-            <div className={`px-6 py-4 flex flex-col gap-3 transition-colors ${
-              deliveringId === task.id ? 'bg-green-50/30' : 'bg-slate-50/50'
-            }`}>
-              <div className="flex items-center gap-2 text-slate-600">
-                <User size={14} className="text-slate-400" />
-                <span className="text-sm font-semibold uppercase tracking-tight">{task.cliente}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className={`w-1.5 h-1.5 rounded-full ${deliveringId === task.id ? 'bg-green-500 animate-pulse' : 'bg-blue-500'}`} />
-                <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{task.status}</span>
-              </div>
-            </div>
-
-            {/* PARTE BASSA: AZIONE CONSEGNA */}
-            <div className="p-6 mt-auto">
-              {deliveringId === task.id ? (
-                <div className="flex items-center justify-between animate-in slide-in-from-bottom-1">
-                  <p className="text-[10px] font-black text-green-600 uppercase tracking-widest">Confermi?</p>
-                  <div className="flex gap-2">
-                    <button 
-                      onClick={() => { updateTask(task.id, 'Consegnato'); setDeliveringId(null); }}
-                      className="bg-green-600 text-white p-2 rounded-lg hover:bg-green-700 transition-colors shadow-lg shadow-green-200"
-                    >
-                      <Check size={18} />
-                    </button>
-                    <button 
-                      onClick={() => setDeliveringId(null)} 
-                      className="bg-slate-100 text-slate-400 p-2 rounded-lg hover:bg-slate-200 transition-colors"
-                    >
-                      <X size={18} />
-                    </button>
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    {task.categoria === 'Moto' ? <Bike size={16} className="text-blue-500" /> : <Car size={16} className="text-blue-500" />}
+                    <h3 className="text-xl font-black text-slate-900 uppercase italic tracking-tight">{task.modello}</h3>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="flex items-center gap-1 text-[10px] font-bold text-slate-400 bg-white border border-slate-200 px-2 py-0.5 rounded shadow-sm"><Hash size={10} /> {task.targa}</span>
+                    {task.priorita === 'Alta' && <span className="bg-red-500 text-white text-[9px] font-black px-2 py-0.5 rounded shadow-sm animate-pulse flex items-center gap-1"><AlertCircle size={10} /> CRITICO</span>}
                   </div>
                 </div>
+                <button onClick={() => setDeletingId(task.id)} className="opacity-0 group-hover:opacity-100 text-slate-300 hover:text-red-500 transition-all p-2 bg-white rounded-full shadow-sm border border-slate-100"><Trash2 size={16} /></button>
+              </div>
+            </div>
+
+            <div className="p-6 space-y-6 flex-grow">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600 shadow-inner"><User size={20} /></div>
+                <div>
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Responsabile</p>
+                  <p className="text-md font-bold text-slate-800 uppercase tracking-tight">{task.cliente}</p>
+                </div>
+              </div>
+
+              <div className="bg-slate-50 rounded-xl p-5 border border-slate-100 relative group/desc">
+                <div className="flex justify-between items-center mb-3">
+                  <span className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]"><FileText size={12} className="text-blue-400" /> Registro Lavoro</span>
+                  {editingId !== task.id && <button onClick={() => { setEditingId(task.id); setTempDesc(task.descrizione); }} className="text-blue-500 hover:bg-blue-100 p-1.5 rounded-md transition-all"><Edit3 size={14} /></button>}
+                </div>
+                {editingId === task.id ? (
+                  <div className="space-y-3">
+                    <textarea value={tempDesc} onChange={(e) => setTempDesc(e.target.value)} className="w-full text-sm font-medium text-slate-700 bg-white border-2 border-blue-200 rounded-lg p-3 focus:outline-none focus:ring-4 focus:ring-blue-50 min-h-[120px]" autoFocus />
+                    <div className="flex gap-2 justify-end">
+                      <button onClick={() => saveEdit(task.id)} className="bg-blue-600 text-white text-[10px] font-black px-4 py-2 rounded-lg flex items-center gap-2 shadow-lg shadow-blue-100"><Save size={12} /> CONFERMA</button>
+                      <button onClick={() => setEditingId(null)} className="bg-white text-slate-400 text-[10px] font-black px-4 py-2 rounded-lg border border-slate-200">ANNULLA</button>
+                    </div>
+                  </div>
+                ) : (
+                  <p onClick={() => { setEditingId(task.id); setTempDesc(task.descrizione); }} className="text-sm font-semibold text-slate-600 leading-relaxed italic cursor-pointer hover:text-slate-900">{task.descrizione || "Nessuna specifica..."}</p>
+                )}
+              </div>
+            </div>
+
+            <div className="px-6 py-5 bg-white border-t border-slate-50 flex items-center justify-between">
+              <div className="flex flex-col">
+                <span className="text-[9px] font-black text-slate-300 uppercase mb-1">Stato Attuale</span>
+                <div className="flex items-center gap-2">
+                  <div className={`w-2.5 h-2.5 rounded-full ${task.status === 'Verniciatura' ? 'bg-orange-500' : 'bg-blue-600'}`} />
+                  <span className="text-xs font-black text-slate-800 uppercase italic">{task.status}</span>
+                </div>
+              </div>
+              {deliveringId === task.id ? (
+                <div className="flex gap-2 animate-in slide-in-from-right-2">
+                  <button onClick={() => { updateTask(task.id, 'Consegnato'); setDeliveringId(null); }} className="bg-emerald-600 text-white px-4 py-2 rounded-lg text-[10px] font-black hover:bg-emerald-700 shadow-md">SI, CONSEGNA</button>
+                  <button onClick={() => setDeliveringId(null)} className="bg-slate-100 text-slate-400 px-3 py-2 rounded-lg"><X size={14} /></button>
+                </div>
               ) : (
-                <button 
-                  onClick={() => setDeliveringId(task.id)}
-                  className="w-full border border-slate-200 hover:border-green-600 hover:text-green-600 text-slate-500 py-2.5 rounded-lg font-bold uppercase text-[10px] tracking-widest transition-all flex items-center justify-center gap-2 bg-white hover:bg-green-50/20"
-                >
-                  <CheckCircle2 size={14} />
-                  Segna Consegna
-                </button>
+                <button onClick={() => setDeliveringId(task.id)} className="flex items-center gap-2 px-5 py-2.5 bg-slate-900 text-white rounded-xl text-[10px] font-black hover:bg-blue-600 transition-all shadow-lg group/btn">FINE INTERVENTO <ArrowRight size={14} className="group-hover/btn:translate-x-1 transition-transform" /></button>
               )}
             </div>
 
-            {/* URGENZA (LINEA ROSSA IN BASSO) */}
-            {task.priorita === 'Alta' && deliveringId !== task.id && (
-              <div className="h-1 w-full bg-red-500" />
+            {deletingId === task.id && (
+              <div className="absolute inset-0 bg-slate-900/90 backdrop-blur-sm z-50 flex flex-col items-center justify-center p-8 text-center animate-in zoom-in-95">
+                <AlertCircle className="text-red-500 mb-4" size={40} />
+                <h4 className="text-white font-black text-lg mb-2">ELIMINA RECORD?</h4>
+                <div className="flex gap-4 w-full mt-4">
+                  <button onClick={() => { deleteTask(task.id); setDeletingId(null); }} className="flex-1 bg-red-600 text-white py-3 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg">CONFERMA</button>
+                  <button onClick={() => setDeletingId(null)} className="flex-1 bg-white/10 text-white py-3 rounded-xl font-black text-[10px] uppercase tracking-widest border border-white/20">CHIUDI</button>
+                </div>
+              </div>
             )}
           </div>
         ))}
       </div>
-
-      {/* STATO VUOTO (Se la ricerca non produce risultati) */}
-      {lavoriFiltrati.length === 0 && (
-        <div className="flex flex-col items-center justify-center py-32 text-slate-300">
-          <SearchX size={48} strokeWidth={1} className="mb-4" />
-          <p className="text-sm font-bold uppercase tracking-[0.2em]">Nessun mezzo trovato</p>
-          <p className="text-xs italic mt-1 text-slate-400">Prova a cambiare i termini della ricerca</p>
-        </div>
-      )}
     </div>
   );
 }
