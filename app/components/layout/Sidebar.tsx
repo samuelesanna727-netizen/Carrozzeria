@@ -6,6 +6,7 @@ import {
   LayoutDashboard, 
   Car, 
   Wrench, 
+  Clock, // Icona per In Consegna
   CheckCircle2, 
   Users, 
   Settings, 
@@ -22,6 +23,7 @@ const menuItems = [
   { icon: LayoutDashboard, label: "Dashboard", href: "/" },
   { icon: Car, label: "Accettazione", href: "/accettazione" },
   { icon: Wrench, label: "In Lavorazione", href: "/lavorazione" },
+  { icon: Clock, label: "In Consegna", href: "/in-consegna" }, // Nuova voce
   { icon: CheckCircle2, label: "Consegnate", href: "/consegnate" },
   { icon: Users, label: "Clienti", href: "/clienti" },
   { icon: Settings, label: "Impostazioni", href: "/impostazioni" },
@@ -58,9 +60,8 @@ export default function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
       </div>
 
       {/* Navigazione */}
-      <nav className="flex-1 px-3 space-y-1 mt-4">
+      <nav className="flex-1 px-3 space-y-1 mt-4 overflow-y-auto">
         {menuItems.map((item) => {
-          // Controlla se la pagina attuale corrisponde al link
           const isActive = pathname === item.href;
 
           return (

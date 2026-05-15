@@ -9,8 +9,9 @@ export type Task = {
   modello: string;
   descrizione: string;
   priorita: "Bassa" | "Media" | "Alta";
-  status: "In Corso" | "Verniciatura" | "Consegnato";
-  categoria: "Auto" | "Moto"; // <-- Aggiunto
+  // Aggiunto "In Consegna" agli stati possibili
+  status: "In Corso" | "Verniciatura" | "In Consegna" | "Consegnato";
+  categoria: "Auto" | "Moto";
   dataIngresso: string;
 };
 
@@ -30,13 +31,19 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
 
+  // Caricamento dati dal localStorage all'avvio
   useEffect(() => {
     const saved = localStorage.getItem("carrozzeria_tasks");
     if (saved) {
-      try { setTasks(JSON.parse(saved)); } catch (e) { console.error(e); }
+      try {
+        setTasks(JSON.parse(saved));
+      } catch (e) {
+        console.error("Errore nel parsing dei dati salvati:", e);
+      }
     }
   }, []);
 
+  // Salvataggio automatico nel localStorage ad ogni modifica dei tasks
   useEffect(() => {
     localStorage.setItem("carrozzeria_tasks", JSON.stringify(tasks));
   }, [tasks]);
@@ -51,11 +58,15 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
   };
 
   const updateTask = (id: string, newStatus: Task["status"]) => {
-    setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, status: newStatus } : t)));
+    setTasks((prev) =>
+      prev.map((t) => (t.id === id ? { ...t, status: newStatus } : t))
+    );
   };
 
   const updateTaskDetails = (id: string, updates: Partial<Task>) => {
-    setTasks((prev) => prev.map((t) => (t.id === id ? { ...t, ...updates } : t)));
+    setTasks((prev) =>
+      prev.map((t) => (t.id === id ? { ...t, ...updates } : t))
+    );
   };
 
   const deleteTask = (id: string) => {
@@ -63,7 +74,17 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <TaskContext.Provider value={{ tasks, searchQuery, setSearchQuery, addTask, updateTask, updateTaskDetails, deleteTask }}>
+    <TaskContext.Provider
+      value={{
+        tasks,
+        searchQuery,
+        setSearchQuery,
+        addTask,
+        updateTask,
+        updateTaskDetails,
+        deleteTask,
+      }}
+    >
       {children}
     </TaskContext.Provider>
   );
@@ -71,6 +92,8 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
 
 export const useTasks = () => {
   const context = useContext(TaskContext);
-  if (!context) throw new Error("useTasks must be used within a TaskProvider");
+  if (!context) {
+    throw new Error("useTasks deve essere utilizzato all'interno di un TaskProvider");
+  }
   return context;
 };
