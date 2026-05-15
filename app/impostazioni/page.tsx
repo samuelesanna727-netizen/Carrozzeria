@@ -4,11 +4,11 @@ import { useState, useEffect } from "react";
 import { 
   Save, Building2, Lock, ArrowLeft, 
   LogOut, Clock, CheckCircle2,
-  ChevronRight, Key, Percent, AlertOctagon 
+  ChevronRight, Key, Percent, AlertOctagon,
+  UserMinus, X, Check, ShieldAlert
 } from "lucide-react";
 import Link from "next/link";
 
-// Definizione del tipo per lo stato
 type SettingsState = {
   nomeAttivita: string;
   pIva: string;
@@ -27,6 +27,13 @@ export default function ImpostazioniPage() {
   const [showSuccess, setShowSuccess] = useState(false);
   const [error, setError] = useState("");
 
+  // Stati per la gestione della sicurezza
+  const [confirmLogout, setConfirmLogout] = useState(false);
+  const [showDeleteForm, setShowDeleteForm] = useState(false);
+  const [delUser, setDelUser] = useState("");
+  const [delPass, setDelPass] = useState("");
+  const [delError, setDelError] = useState("");
+
   const [settings, setSettings] = useState<SettingsState>({
     nomeAttivita: "Samuele Pro Auto",
     pIva: "IT01234567890",
@@ -40,7 +47,6 @@ export default function ImpostazioniPage() {
     notificheScadenza: true
   });
 
-  // Carica le impostazioni salvate all'avvio
   useEffect(() => {
     const saved = localStorage.getItem("proauto_config");
     if (saved) {
@@ -50,23 +56,18 @@ export default function ImpostazioniPage() {
 
   const handleSave = () => {
     setError("");
-    
-    // 1. RECUPERO E DECODIFICA PASSWORD ATTUALE
     const storedAdmin = localStorage.getItem("adminCredentials");
-    let currentPassword = "admin"; // Fallback standard
+    let currentPassword = "admin";
 
     if (storedAdmin) {
       try {
         const parsed = JSON.parse(storedAdmin);
-        // Se è un oggetto prende .password, altrimenti assume sia una stringa pura
         currentPassword = typeof parsed === 'object' ? parsed.password : parsed;
       } catch (e) {
-        currentPassword = storedAdmin; // Se non è JSON, è una stringa semplice
+        currentPassword = storedAdmin;
       }
     }
 
-    // 2. VALIDAZIONE CAMBIO PASSWORD
-    // Eseguiamo i controlli solo se l'utente ha iniziato a scrivere nel campo password
     if (settings.vecchiaPassword || settings.nuovaPassword || settings.confermaPassword) {
       if (settings.vecchiaPassword !== currentPassword) {
         setError("La password attuale inserita non è corretta.");
@@ -80,32 +81,39 @@ export default function ImpostazioniPage() {
         setError("La nuova password deve essere di almeno 4 caratteri.");
         return;
       }
-
-      // Se i controlli passano, aggiorna le credenziali di accesso
-      localStorage.setItem("adminCredentials", JSON.stringify({ password: settings.nuovaPassword }));
+      localStorage.setItem("adminCredentials", JSON.stringify({ user: "admin", password: settings.nuovaPassword }));
     }
 
-    // 3. SALVATAGGIO CONFIGURAZIONI GENERALI
     setIsSaving(true);
-    
     setTimeout(() => {
-      // Escludiamo i campi password temporanei dal salvataggio della config generale
       const { vecchiaPassword, nuovaPassword, confermaPassword, ...configToSave } = settings;
       localStorage.setItem("proauto_config", JSON.stringify(configToSave));
-      
       setIsSaving(false);
       setShowSuccess(true);
-      
-      // Pulizia campi password nel form
-      setSettings(prev => ({ 
-        ...prev, 
-        vecchiaPassword: "", 
-        nuovaPassword: "", 
-        confermaPassword: "" 
-      }));
-
+      setSettings(prev => ({ ...prev, vecchiaPassword: "", nuovaPassword: "", confermaPassword: "" }));
       setTimeout(() => setShowSuccess(false), 3000);
     }, 800);
+  };
+
+  const handleLogout = () => {
+    sessionStorage.removeItem("isLoggedIn");
+    window.location.href = "/login";
+  };
+
+  const handleDeleteAccount = (e: React.FormEvent) => {
+    e.preventDefault();
+    const storedAdmin = localStorage.getItem("adminCredentials");
+    if (storedAdmin) {
+      const { user, password } = JSON.parse(storedAdmin);
+      if (delUser === user && delPass === password) {
+        localStorage.clear();
+        sessionStorage.clear();
+        window.location.href = "/login";
+      } else {
+        setDelError("Credenziali errate");
+        setTimeout(() => setDelError(""), 3000);
+      }
+    }
   };
 
   const toggleSetting = (key: keyof SettingsState) => {
@@ -127,7 +135,7 @@ export default function ImpostazioniPage() {
         </div>
 
         {showSuccess && (
-          <div className="flex items-center gap-2 bg-green-50 text-green-600 px-6 py-3 rounded-xl border border-green-100 animate-in zoom-in">
+          <div className="flex items-center gap-2 bg-green-50 text-green-600 px-6 py-3 rounded-xl border border-green-100 animate-in zoom-in text-left">
             <CheckCircle2 size={16} />
             <span className="text-[10px] font-black uppercase tracking-widest">Configurazione salvata</span>
           </div>
@@ -138,8 +146,6 @@ export default function ImpostazioniPage() {
         
         {/* COLONNA INPUT PRINCIPALI */}
         <div className="lg:col-span-2 space-y-8">
-          
-          {/* SEZIONE ANAGRAFICA */}
           <section className="bg-white p-8 rounded-xl border border-slate-100 shadow-sm">
             <div className="flex items-center gap-3 mb-8 border-b border-slate-50 pb-4">
               <Building2 className="text-blue-500" size={18} />
@@ -167,7 +173,6 @@ export default function ImpostazioniPage() {
             </div>
           </section>
 
-          {/* SEZIONE SICUREZZA - CAMBIO PASSWORD */}
           <section className="bg-white p-8 rounded-xl border border-slate-100 shadow-sm">
             <div className="flex items-center gap-3 mb-6">
               <Key className="text-blue-500" size={18} />
@@ -212,7 +217,7 @@ export default function ImpostazioniPage() {
           </section>
         </div>
 
-        {/* COLONNA LATERALE - AZIONI RAPIDE */}
+        {/* COLONNA LATERALE */}
         <div className="space-y-6">
           <button 
             onClick={handleSave}
@@ -226,23 +231,15 @@ export default function ImpostazioniPage() {
           </button>
 
           <div className="bg-slate-50/50 p-6 rounded-xl border border-slate-100 space-y-4">
+            {/* PIN E BACKUP (INVARIATI) */}
             <div className="flex items-center justify-between p-3 bg-white rounded-lg border border-slate-100">
               <span className="text-[10px] font-black text-slate-700 uppercase tracking-tight">Pin Rapido Tablet</span>
-              <input 
-                type="text" 
-                maxLength={4}
-                value={settings.pinAccesso} 
-                onChange={e => setSettings({...settings, pinAccesso: e.target.value})} 
-                className="w-12 text-right font-black text-blue-600 outline-none bg-transparent" 
-              />
+              <input type="text" maxLength={4} value={settings.pinAccesso} onChange={e => setSettings({...settings, pinAccesso: e.target.value})} className="w-12 text-right font-black text-blue-600 outline-none bg-transparent" />
             </div>
             
             <div className="flex items-center justify-between p-3 bg-white rounded-lg border border-slate-100">
               <span className="text-[10px] font-black text-slate-700 uppercase">Backup Cloud</span>
-              <button 
-                onClick={() => toggleSetting("autoBackup")}
-                className={`w-9 h-5 rounded-full relative transition-all ${settings.autoBackup ? "bg-blue-500" : "bg-slate-200"}`}
-              >
+              <button onClick={() => toggleSetting("autoBackup")} className={`w-9 h-5 rounded-full relative transition-all ${settings.autoBackup ? "bg-blue-500" : "bg-slate-200"}`}>
                 <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${settings.autoBackup ? "right-1" : "left-1"}`} />
               </button>
             </div>
@@ -250,35 +247,81 @@ export default function ImpostazioniPage() {
             <div className="flex items-center justify-between p-3 bg-white rounded-lg border border-slate-100">
               <span className="text-[10px] font-black text-slate-700 uppercase tracking-tight">Iva Default</span>
               <div className="flex items-center gap-1">
-                <input 
-                  type="text" 
-                  value={settings.aliquotaIva} 
-                  onChange={e => setSettings({...settings, aliquotaIva: e.target.value})} 
-                  className="w-6 text-right font-black text-blue-600 outline-none bg-transparent" 
-                />
+                <input type="text" value={settings.aliquotaIva} onChange={e => setSettings({...settings, aliquotaIva: e.target.value})} className="w-6 text-right font-black text-blue-600 outline-none bg-transparent" />
                 <Percent size={12} className="text-slate-300" />
               </div>
             </div>
           </div>
 
           <div className="space-y-3 pt-4 border-t border-slate-100">
-            <button 
-              onClick={() => window.location.href = "/login"} 
-              className="w-full flex items-center justify-between p-4 bg-white border border-slate-100 rounded-xl hover:bg-blue-50 transition-all group"
-            >
-              <div className="flex items-center gap-3">
-                <LogOut size={16} className="text-slate-400 group-hover:text-blue-500" />
-                <span className="text-[10px] font-black text-slate-700 uppercase tracking-widest text-left">Chiudi Sessione</span>
+            {/* LOGOUT CON DOPPIA CONFERMA */}
+            {!confirmLogout ? (
+              <button 
+                onClick={() => setConfirmLogout(true)}
+                className="w-full flex items-center justify-between p-4 bg-white border border-slate-100 rounded-xl hover:bg-orange-50 transition-all group"
+              >
+                <div className="flex items-center gap-3 text-left">
+                  <LogOut size={16} className="text-slate-400 group-hover:text-orange-500" />
+                  <span className="text-[10px] font-black text-slate-700 uppercase tracking-widest">Chiudi Sessione</span>
+                </div>
+                <ChevronRight size={14} className="text-slate-200" />
+              </button>
+            ) : (
+              <div className="flex gap-2 animate-in slide-in-from-right-2">
+                <button onClick={handleLogout} className="flex-1 p-4 bg-orange-500 text-white rounded-xl font-black text-[9px] uppercase tracking-widest flex items-center justify-center gap-2">
+                  <Check size={14} /> Conferma
+                </button>
+                <button onClick={() => setConfirmLogout(false)} className="p-4 bg-slate-100 text-slate-400 rounded-xl">
+                  <X size={14} />
+                </button>
               </div>
-              <ChevronRight size={14} className="text-slate-200" />
-            </button>
-            
-            <button 
-              onClick={() => confirm("⚠️ Reset totale? Perderai tutti i dati!") && localStorage.clear()} 
-              className="w-full p-4 text-[9px] font-black text-red-300 uppercase tracking-widest hover:text-red-500 transition-colors"
-            >
-              Reset Fabbrica
-            </button>
+            )}
+
+            {/* ELIMINAZIONE ACCOUNT CON FORM E CONFERMA */}
+            {!showDeleteForm ? (
+              <button 
+                onClick={() => setShowDeleteForm(true)}
+                className="w-full p-4 text-[9px] font-black text-red-300 uppercase tracking-widest hover:text-red-500 transition-colors flex items-center justify-center gap-2"
+              >
+                <UserMinus size={12} /> Eliminazione Account
+              </button>
+            ) : (
+              <div className="bg-red-50 p-6 rounded-xl border border-red-100 animate-in zoom-in space-y-4 shadow-inner">
+                <div className="flex items-center gap-2 text-red-600 mb-2">
+                  <ShieldAlert size={16} />
+                  <span className="text-[10px] font-black uppercase">Verifica Sicurezza</span>
+                </div>
+                
+                <form onSubmit={handleDeleteAccount} className="space-y-3">
+                  <input 
+                    type="text" 
+                    placeholder="Nome Utente" 
+                    className="w-full p-3 bg-white border border-red-200 rounded-lg outline-none text-[11px] font-bold"
+                    value={delUser}
+                    onChange={(e) => setDelUser(e.target.value)}
+                    required
+                  />
+                  <input 
+                    type="password" 
+                    placeholder="Password" 
+                    className="w-full p-3 bg-white border border-red-200 rounded-lg outline-none text-[11px] font-bold"
+                    value={delPass}
+                    onChange={(e) => setDelPass(e.target.value)}
+                    required
+                  />
+                  
+                  <div className="flex gap-2 pt-2">
+                    <button type="submit" className="flex-1 p-3 bg-red-600 text-white rounded-lg font-black text-[9px] uppercase">
+                      Elimina Definitivamente
+                    </button>
+                    <button type="button" onClick={() => setShowDeleteForm(false)} className="p-3 bg-white text-slate-400 rounded-lg border border-red-100">
+                      <X size={14} />
+                    </button>
+                  </div>
+                  {delError && <p className="text-[8px] text-red-500 font-black uppercase text-center">{delError}</p>}
+                </form>
+              </div>
+            )}
           </div>
         </div>
       </div>
