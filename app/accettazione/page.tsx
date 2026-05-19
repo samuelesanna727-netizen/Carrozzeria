@@ -48,9 +48,9 @@ export default function AccettazionePage() {
     if (isSubmitting) return;
 
     setIsSubmitting(true);
+    let success = false; 
     
     try {
-      // Chiamiamo l'azione server che parla con Prisma
       await createVehicle({
         cliente: formData.cliente,
         targa: formData.targa,
@@ -60,17 +60,31 @@ export default function AccettazionePage() {
         categoria: categoria,
       });
 
-      setShowToast(true);
-      // Il redirect avviene già dentro l'azione, ma puliamo per sicurezza
-      setFormData({
-        cliente: "", targa: "", marca: "", modello: "", descrizione: "",
-        priorita: "Media", difficolta: "Media"
-      });
-    } catch (error) {
-      console.error("Errore nel salvataggio:", error);
-      alert("Errore nel salvataggio del veicolo.");
+      success = true; 
+    } catch (error: any) { // 👈 Risolto qui: forzato il tipo ad 'any' per digerire le proprietà di Next.js
+      // Intercettiamo il finto errore del redirect di Next.js per non mostrare l'alert
+      if (
+        (error instanceof Error && error.message.includes("NEXT_REDIRECT")) || 
+        (error?.digest && error.digest.includes("NEXT_REDIRECT")) ||
+        (error?.message && error.message.includes("NEXT_REDIRECT"))
+      ) {
+        success = true; 
+      } else {
+        console.error("Errore reale nel salvataggio:", error);
+        alert("Errore nel salvataggio del veicolo. Controlla la console del server.");
+      }
     } finally {
       setIsSubmitting(false);
+      
+      if (success) {
+        setShowToast(true);
+        setTimeout(() => setShowToast(false), 3000);
+        
+        setFormData({
+          cliente: "", targa: "", marca: "", modello: "", descrizione: "",
+          priorita: "Media", difficolta: "Media"
+        });
+      }
     }
   };
 
@@ -104,12 +118,14 @@ export default function AccettazionePage() {
       {/* CATEGORY SWITCHER */}
       <div className="flex bg-slate-100 p-1 rounded-2xl w-fit mb-8 gap-1">
         <button
+          type="button"
           onClick={() => { setCategoria("Auto"); setFormData({ ...formData, marca: "", modello: "" }); }}
           className={`flex items-center gap-3 px-8 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all ${categoria === "Auto" ? "bg-white text-blue-600 shadow-sm" : "text-slate-400 hover:text-slate-600"}`}
         >
           <Car size={16} /> Auto
         </button>
         <button
+          type="button"
           onClick={() => { setCategoria("Moto"); setFormData({ ...formData, marca: "", modello: "" }); }}
           className={`flex items-center gap-3 px-8 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all ${categoria === "Moto" ? "bg-white text-blue-600 shadow-sm" : "text-slate-400 hover:text-slate-600"}`}
         >
@@ -145,7 +161,7 @@ export default function AccettazionePage() {
                   type="text" required maxLength={7} placeholder="AA123BB"
                   value={formData.targa}
                   onChange={(e) => {
-                    const val = e.target.value.toUpperCase();
+                    const val = e.target.value.toUpperCase().replace(/\s/g, "");
                     if (val.length <= 7) setFormData({ ...formData, targa: val });
                   }}
                   className="w-full px-5 py-3.5 bg-slate-50 border border-slate-100 rounded-xl outline-none focus:bg-white focus:border-blue-400 transition-all font-mono font-black text-slate-800 text-lg uppercase"

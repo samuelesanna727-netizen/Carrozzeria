@@ -11,6 +11,7 @@ import {
 export default function LavorazioneClient({ initialTasks }: { initialTasks: any[] }) {
   const [tasks, setTasks] = useState(initialTasks);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deliveryId, setDeliveryId] = useState<string | null>(null); // Stato per la conferma localizzata
   const [editingId, setEditingId] = useState<string | null>(null);
   const [tempDesc, setTempDesc] = useState("");
 
@@ -25,6 +26,7 @@ export default function LavorazioneClient({ initialTasks }: { initialTasks: any[
   const handleMoveToDelivery = async (id: string) => {
     await updateTaskStatus(id, "In Consegna");
     setTasks(tasks.filter(t => t.id !== id)); // Rimuovi dalla vista lavorazione
+    setDeliveryId(null);
   };
 
   // Funzione per eliminare
@@ -106,7 +108,7 @@ export default function LavorazioneClient({ initialTasks }: { initialTasks: any[
               </div>
 
               {/* FOOTER */}
-              <div className="px-6 py-5 bg-white border-t border-slate-50 flex items-center justify-between">
+              <div className="px-6 py-5 bg-white border-t border-slate-50 flex items-center justify-between min-h-[85px]">
                 <div className="flex flex-col text-left">
                   <span className="text-[9px] font-black text-slate-300 uppercase mb-1">Stato</span>
                   <div className="flex items-center gap-2">
@@ -115,12 +117,38 @@ export default function LavorazioneClient({ initialTasks }: { initialTasks: any[
                   </div>
                 </div>
 
-                <button onClick={() => handleMoveToDelivery(task.id)} className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-xl text-[10px] font-black hover:bg-blue-700 transition-all shadow-lg shadow-blue-100 group/btn">
-                  PRONTO <ArrowRight size={14} className="group-hover/btn:translate-x-1 transition-transform" />
-                </button>
+                {/* LOGICA BOTTONE / CONFERMA LOCALIZZATA */}
+                <div className="relative overflow-hidden">
+                  {deliveryId === task.id ? (
+                    // Stato di Conferma (piccolino, sostituisce il bottone)
+                    <div className="flex items-center gap-1.5 animate-in slide-in-from-right-full duration-300">
+                      <button 
+                        onClick={() => setDeliveryId(null)} 
+                        className="p-3 bg-slate-100 text-slate-500 rounded-xl hover:bg-slate-200 transition-colors"
+                        title="Annulla"
+                      >
+                        <X size={16} />
+                      </button>
+                      <button 
+                        onClick={() => handleMoveToDelivery(task.id)} 
+                        className="flex items-center gap-2 px-5 py-3 bg-green-600 text-white rounded-xl text-[10px] font-black hover:bg-green-700 transition-all shadow-lg shadow-green-100"
+                      >
+                        <Check size={14} /> CONFERMA
+                      </button>
+                    </div>
+                  ) : (
+                    // Stato Normale
+                    <button 
+                      onClick={() => setDeliveryId(task.id)} 
+                      className="flex items-center gap-2 px-5 py-3 bg-blue-600 text-white rounded-xl text-[10px] font-black hover:bg-blue-700 transition-all shadow-lg shadow-blue-100 group/btn animate-in fade-in"
+                    >
+                      PRONTO <ArrowRight size={14} className="group-hover/btn:translate-x-1 transition-transform" />
+                    </button>
+                  )}
+                </div>
               </div>
 
-              {/* MODALE ELIMINA */}
+              {/* MODALE ELIMINA (Rimane overlay perché è un'azione distruttiva) */}
               {deletingId === task.id && (
                 <div className="absolute inset-0 bg-slate-900/90 backdrop-blur-sm z-50 flex flex-col items-center justify-center p-8 text-center animate-in zoom-in-95 rounded-2xl">
                   <AlertCircle className="text-red-500 mb-4" size={40} />
